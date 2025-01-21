@@ -13,11 +13,11 @@ future: true
 
 # SNS settings
 RSS: false
-weibo_username: Bigbabypro
-zhihu_username: Bigbabypro
-github_username: Bigbabypro
-twitter_username: Bigbabypro
-#facebook_username:  Bigbabypro
+#weibo_username: Bigbaby
+#zhihu_username: Bigbaby
+github_username: Angrybigbaby
+#twitter_username: Bigbaby
+#facebook_username:  Bigbaby
 #linkedin_username:  firstname-lastname-idxxxx
 
 # Build settings
