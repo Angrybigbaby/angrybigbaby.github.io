@@ -3,7 +3,7 @@ title: Bigbaby Blog
 SEOTitle: 肖大宝的博客 | Bigbaby Blog
 header-img: img/home-bg.jpg
 email: Bigbabypro@gmail.com
-description: "这里是 @Bigbaby肖大宝 的个人博客，与你一起发现更大的世界 | 要做一个有 swag 的程序员"
+description: "这里是 @Bigbaby肖大宝的空间，学习永无止境 | 代码的尽头是玄学"
 keyword: "肖大宝, Bigbaby Xiao, Peter, Bigbaby, 肖大宝的博客, Bigbaby Blog, 博客, 大数据, Hadoop, Flink, Spark, 分布式, 数据仓库, 数据架构"
 # 暂时去掉 url: "https://huangxuan.me" # your host, for absolute URL
 # 暂时去掉 baseurl: "" # for example, '/blog' if your blog hosted on 'host/blog'
@@ -74,8 +74,8 @@ ga_domain: huangxuan.me
 
 # Sidebar settings
 sidebar: true # whether or not using Sidebar.
-sidebar-about-description: "要做一个有 swag 的程序员 <br> React Team @ Meta"
-sidebar-avatar: https://github.com/Bigbabypro.png # use absolute URL, seeing it's used in both `/` and `/about/`
+sidebar-about-description: "代码的尽头是玄学 <br> 技术的尽头是政治 "
+sidebar-avatar: https://github.com/Angrybigbaby.png # use absolute URL, seeing it's used in both `/` and `/about/`
 
 # Featured Tags
 featured-tags: true # whether or not using Feature-Tags
@@ -89,14 +89,14 @@ service-worker: true
 page-mathjax: false
 
 # Friends
-friends:
-  [
-    { title: "乱序（Midare）", href: "http://mida.re/" },
-    { title: "Ebn Zhang", href: "https://ebnbin.dev/" },
-    { title: "Kun Qian", href: "http://kunq.me" },
-    { title: "Sherry Woo", href: "https://sherrywoo.me/" },
-    { title: "SmdCn", href: "http://blog.smdcn.net" },
-    { title: "JiyinYiyong", href: "http://tiye.me/" },
-    { title: "DHong Say", href: "http://dhong.co" },
-    { title: "尹峰以为", href: "http://ingf.github.io/" },
-  ]
+# 暂时去掉 friends:
+  # [
+  #   { title: "乱序（Midare）", href: "http://mida.re/" },
+  #   { title: "Ebn Zhang", href: "https://ebnbin.dev/" },
+  #   { title: "Kun Qian", href: "http://kunq.me" },
+  #   { title: "Sherry Woo", href: "https://sherrywoo.me/" },
+  #   { title: "SmdCn", href: "http://blog.smdcn.net" },
+  #   { title: "JiyinYiyong", href: "http://tiye.me/" },
+  #   { title: "DHong Say", href: "http://dhong.co" },
+  #   { title: "尹峰以为", href: "http://ingf.github.io/" },
+  # ]
