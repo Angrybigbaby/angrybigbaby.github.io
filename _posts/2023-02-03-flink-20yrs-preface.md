@@ -34,10 +34,3 @@ flink支持广义上的三种部署模式，即standalone，Flink on K8s以及Fl
 	为每个提交的应用程序创建一个集群，并在应用程序完成时终止（比session更好，更节约资源，和perjob一样）
     优点:节省下载依赖项所需的带宽（以上内容将允许作业提交更加轻量级，因为所需的Flink jar和应用程序jar将由指定的远程位置拾取，而不是由客户端发送到集群。）
 ![image](https://github.com/user-attachments/assets/5c6a1f14-60a6-4b23-9aa5-1711015b9d0b)
-
-
-    ![image](https://github.com/user-attachments/assets/a6584aaa-e874-4114-9357-a15c4068994f)
-
-
-
-
