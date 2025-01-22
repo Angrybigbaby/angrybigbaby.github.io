@@ -1,6 +1,7 @@
 ---
 layout:     post
 title:      "聊聊checkpoint对齐的问题"
+subtitle:   搞清楚checkpoint和反压的关系了吗 
 date:       2023-06-20 19:11:00
 author:     "Bigbaby"
 tags:
