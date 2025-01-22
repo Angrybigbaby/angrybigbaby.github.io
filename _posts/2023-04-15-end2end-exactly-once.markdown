@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "关于Flink end to end exactly once的一些理解"
-subtitle:   ""
+subtitle:   "关于一致性的理论与实践相结合"
 date:       2023-04-15 18:33:00
 author:     "Bigbaby"
 tags:
