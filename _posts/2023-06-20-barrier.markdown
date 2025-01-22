@@ -1,15 +1,16 @@
 ---
 layout:     post
-title:      "你们觉得响应式好呢，还是手机和PC端分开来写？"
-date:       2014-11-20 12:00:00
-author:     "Hux"
-header-img: "img/post-bg-rwd.jpg"
+title:      "聊聊checkpoint对齐的问题"
+date:       2023-06-20 19:11:00
+author:     "Bigbaby"
 tags:
-    - 知乎
-    - Web
+    - Flink
 ---
 
-> 这篇文章转载自[我在知乎上的回答](http://www.zhihu.com/question/25836425/answer/31564174)
+> Flink使用Chandy-Lamport algorithm算法的一种变体，称为异步barrier快照（asynchronous barrier snapshotting）。
+> 当checkpoint coordinator（job manager 的一部分）指示taskmanager开始checkpoint时，它会让所有sources记录它们的偏移量，并将编号的checkpoint barriers插入到它们的流中。这些barriers流经 job graph，标注每个checkpoint前后的流部分。
+
+讲人话就是，
 
 
 <div>
