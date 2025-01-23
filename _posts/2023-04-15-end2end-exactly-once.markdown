@@ -113,7 +113,9 @@ kafka：
     FlinkKafkaProducer，继承了TwoPhaseCommitSinkFunction，通过kafka事务机制进行两阶段提交（老版API，已被弃用，Flink 1.15 中移除）；
 
     KafkaSink，在开启checkpoint的情况下所有数据通过在 checkpoint 时提交的事务写入（本质为通过kafka自身的事务机制两阶段提交）（新版API）
+
 ```java
+
 DataStream<String> stream = ...;
         
 KafkaSink<String> sink = KafkaSink.<String>builder()
@@ -127,8 +129,14 @@ KafkaSink<String> sink = KafkaSink.<String>builder()
         .build();
         
 stream.sinkTo(sink);
+
 ```
-KafkaSink支持三种不同的语义保证（DeliveryGuarantee）。对于DeliveryGuarantee.AT_LEAST_ONCE和 DeliveryGuarantee.EXACTLY_ONCE，checkpoint必须启用。默认情况下KafkaSink使用 DeliveryGuarantee.NONE。以下详细解释三种语义的配置方法：
+
+KafkaSink支持三种不同的语义保证（DeliveryGuarantee）。
+
+对于DeliveryGuarantee.AT_LEAST_ONCE和 DeliveryGuarantee.EXACTLY_ONCE，checkpoint必须启用。
+
+默认情况下KafkaSink使用 DeliveryGuarantee.NONE。以下详细解释三种语义的配置方法：
 
 DeliveryGuarantee.NONE：不提供任何保证。消息有可能会因Kafka broker的原因发生丢失或因Flink的故障发生重复。
 
@@ -141,6 +149,7 @@ MySQL：
     使用JDBC sink中的exactly-once模式（因为jdbcSink支持XA标准）
 
 ```java
+
 StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 env
         .fromElements(...)
@@ -158,15 +167,19 @@ env
                         .withDriverName(getDbMetadata().getDriverClass())
                         .build()));
 env.execute();
+
 ```
 
 从 1.13 版本开始，Flink JDBC Sink支持Exactly-Once模式。该实现依赖于JDBC驱动对XA标准的支持。
 
 但诸如PostgreSQL、MySQL等数据库仅允许每次连接一个XA事务。因此需要增加以下API。
+
 ```java
+
 JdbcExactlyOnceOptions.builder()
 .withTransactionPerConnection(true)
 .build();
+
 ```
 
 ~~写到这不仅感慨哪有什么Java开发，都是API开发而已~~
