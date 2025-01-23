@@ -1,13 +1,11 @@
 ---
 layout:     post
-title:      "如何看待微信屏蔽快的打车事件？"
-subtitle:   "恰有小感。"
-date:       2014-12-13
-author:     "Hux"
-header-img: "img/post-bg-kuaidi.jpg"
+title:      "又一反压解决方案"
+subtitle:   "这次是新东西"
+date:       2023-07-13 21:00
+author:     "Bigbaby"
 tags:
-    - 知乎
-    - 产品
+    - Flink
 ---
 
 > 这篇文章转载自[我在知乎上的回答](http://www.zhihu.com/question/26774049/answer/35041458)
