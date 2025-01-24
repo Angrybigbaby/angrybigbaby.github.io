@@ -1,0 +1,89 @@
+---
+layout:     post
+title:      "关于Hudi的一些配置和优化"
+subtitle:   "今天我生日，这次聊聊实时湖仓的一次实践"
+date:       2024-05-05
+author:     "Bigbaby"
+catalog:    true
+tags:
+    - Flink
+    - Hudi
+---
+
+> Apache Hudi（Hadoop Upserts Delete and Incremental）是下一代流数据湖平台。Apache Hudi将核心仓库和数据库功能直接引入数据湖。Hudi提供了表、事务、高效的upserts/delete、高级索引、流摄取服务、数据集群/压缩优化和并发，同时保持数据的开源文件格式。
+>
+> Hudi不仅非常适合于流工作负载，而且还允许创建高效的增量批处理管道。它可以轻松地在任何云存储平台上使用。Hudi的高级性能优化，使分析工作负载更快的任何流行的查询引擎，包括Apache Spark、Flink、Presto、Trino、Hive等。
+
+## 为什么选择Hudi
+
+从项目角度来看，Hive由于不支持update，upsert等操作，因此对于涉及数据新增+更新的场景，Hive存在局限性。
+
+数据湖的思想是将不同格式的数据统一存储和管理，而作为数据湖组件，Hudi对于数据格式的高兼容性是一个不可忽视的优势。非格式化数据如气象图片、语音报文、某些报文所传递的二进制数据等可以将原始数据直接存入数据湖内。这对于数据存储而言能够实现架构统一，便于管理的同时也能够节约工作量。
+
+由于Hudi在文件结构上分组，分片的设计思想，卓越的写入性能也能够让Hudi实现近实时写入。
+
+然而在Flink + Hudi场景中，为了实现数据的可查询，需要将Hudi表同步到Hive中。Hive作为被广泛使用的大数据组件，是基于Hadoop的一个数据仓库工具。其作用是将结构化数据文件映射为一张数据库表，并提供类SQL查询功能。
+
+Hudi 源表对应一份 HDFS 数据，通过 Spark，Flink 组件或者 Hudi CLI，可以将 Hudi 表的数据映射为 Hive 外部表。基于该外部表， Hive可以方便的进行实时视图，读优化视图以及增量视图的查询。
+
+项目中通过定义Hudi相关配置项，实现Hudi表自动映射为Hive表，从而提供数仓查询入口。项目中指定Hive同步模式为HSM，即Hivemetastore。在HMS模式中，需要指定Hivemetastore的地址。
+
+Hudi通过访问Hive元数据，实现同步Hive。由此可以通过Hive查询Hudi的库表内容。
+
+## 从Hudi配置项引发的一些思考
+
+我们选择的Hudi版本是0.13。其中最主要的原因是<s>这是最新版本</s>。
+
+在FlinkJob的Sink设计中，对于Hudi输出表，需要在DDL语句中包括Hudi对应的部分配置项。
+
+首先是Hudi表类型的配置。在Hudi中分为Copy On Write（COW）表和Merge On Read（MOR）表。
+
+在COW表中，只有数据文件/基本文件（.parquet）,没有增量日志文件（.log.*）。
+
+而在MOR表中，包含列存的基本文件（.parquet）和行存的增量日志文件（基于行的avro格式，.log.*）。
+
+COW表与MOR表比较而言，COW表写入延迟更高，而MOR表查询延迟更高。我们正在做的部分系统系统存在数据量大，时效性要求高，查询要求低的特点，因此适用于MOR表。
+
+而部分系统不需要对写入性能做过多优化，考虑到运维难度采用COW表实现。<s>就是你猜的到意思，0.13版本的MOR表全是坑</s>
+
+Hudi支持upsert写入。所谓upsert，即为存在主键相同数据时更新该数据，不存在则追加写入。
+
+在写入性能上，insert优于upsert，因为upsert写入过程中需要经由索引扫描历史数据。然而部分场景可能出现数据重复，例如Cat021，Cat062等解析后可能出现一对多的场景。
+
+如果使用insert写入则raw_data层会发生数据重复。因此在部分系统中指定upsert写入。
+
+对于MOR表而言，由于存在基本文件和增量日志，因此在Hudi中需额外指定Compaction相关参数。
+
+Compaction（压缩）是合并Hudi内部差异数据结构的后台活动，例如:将更新操作从基于行的log日志文件合并到列式存储的数据文件。在内部，Compaction体现为Timeline上的特殊提交。
+
+对于Compaction触发策略，选择“num_or_time”的策略，即指定间隔Commits个数与时间间隔，两个条件任一个被满足则触发Compaction。因此，Compaction与Commits配置息息相关。
+
+一次Commit（提交）表示将一批数据原子性地写入一个表。在Flink + Hudi场景中，Flink Checkpoint会触发Hudi的一次Commit。当Checkpoint触发时，Hudi会将内存里的数据全部Flush出去。我们指定Compaction触发策略为300秒或3次Commit。
+
+Hudi默认开启异步压缩，及将压缩过程与存储过程解耦，由独立线程进行压缩。异步压缩会减少数据写入的延迟，但在实际中出现过**无法触发Compaction的情况**。
+
+因此后续考虑将部分库表指定为同步压缩。同步压缩会确保Compaction操作完成后再进行后续处理，理论上能够保证Cmpaction的成功率。
+
+在Flink场景下Hudi默认索引为State Based Index索引。Hudi在0.8.0版本中实现的Flink Witer，采用了Flink的State作为底层的Index（索引）存储，每个Records在写入之前都会先计算目标Bucket ID。
+
+而从Hudi的0.11版本开始支持Bucket索引。Flink默认实时场景下用State存储索引信息，即Primary Key到FileId的映射关系。
+
+当数据量比较大的时候，State的存储开销可能成为瓶颈。Bucket 索引通过固定的Hash策略，将相同Key的数据分配到同一个FileGroup（文件组）中，避免了索引的存储和查询开销。
+
+与State索引相比，Bucket索引没有State的存储计算开销，性能较好。但是Bucket索引无法扩Buckets（桶数量），且不支持不支持跨Partition的变更（cdc流不受限制）。
+
+考虑到项目中几乎不存在需要跨Partition变更的场景，且在可以预见的时间范围内，可以通过在初期建表语句中设定合理的Bucket数量的方式来避免后期Buckets（桶数量）过少的问题。因此综合考虑指定Bucket作为各个系统的表索引。
+
+我们指定Buckets数量为256，且索引键字段指定为MD5ID，这样数据会根据MD5ID的主键HASH值分到对应的Bucket中。
+
+Hudi支持Clean功能，启用后，每次提交后都会立即调用Cleaner表服务，以删除较旧的文件切片。Hudi官方推荐开启Clean功能，因为Clean功能可以限制数据与元数据的增长。
+
+对于COW表，对每一个新批次写入都将创建相应数据文件的新版本（新的FileSlice，或称文件片）。对于MOR表，随着Compaction被触发，旧的FileSlice可能会与Deltalog文件发生合并，生成新的FileSlice。
+
+因此，不管是COW表还是MOR表，随着数据量的增加，旧版本的FileSlice数量也会随之增加。因此我认为开启Clean功能是必要的，Clean功能可以通过指定清理策略来定期清理Commits。
+
+同时开启异步Clean，以提高整体写入性能。项目中指定的清理策略为KEEP_LATEST_COMMITS，即保留最新的Commits。
+
+此外指定在清理过程中每个文件组中要保留的最小文件切片数为3。
+
+> 如果说接触Hudi的一年来有什么让我收获最大的话，那就是不要碰任何版本号没迭代到1.0的开源组件。说多了都是泪。
