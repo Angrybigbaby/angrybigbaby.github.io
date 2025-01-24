@@ -2,7 +2,7 @@
 layout:     post
 title:      "关于Java内存队列的一些应用"
 date:       2023-10-22
-author:     "Hux"
+author:     "Bigbaby"
 tags:
   - Java
 ---
