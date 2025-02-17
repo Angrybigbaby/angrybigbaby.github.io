@@ -5,7 +5,7 @@ header-img: img/home-bg.jpg
 email: bigballerxiao@gmail.com
 description: "这里是 @Bigbaby肖大宝的频道，愿诸君学有所成 | 代码的尽头是玄学"
 keyword: "肖大宝, Bigbaby Xiao, Peter, Bigbaby, 肖大宝的博客, Bigbaby Blog, 博客, 大数据, Hadoop, Flink, Spark, 分布式, 数据仓库, 数据架构"
-# 暂时去掉 url: "https://huangxuan.me" # your host, for absolute URL
+url: "angrybigbaby.github.io" # your host, for absolute URL
 # 暂时去掉 baseurl: "" # for example, '/blog' if your blog hosted on 'host/blog'
 
 # Publish posts or collection documents with a future date.
@@ -69,8 +69,8 @@ netease_comment: false
 # ba_track_id: [your track id]
 
 # Google Analytics
-ga_track_id: "UA-49627206-1" # Format: UA-xxxxxx-xx
-ga_domain: huangxuan.me
+# ga_track_id: "UA-49627206-1" # Format: UA-xxxxxx-xx
+# ga_domain: huangxuan.me
 
 # Sidebar settings
 sidebar: true # whether or not using Sidebar.
