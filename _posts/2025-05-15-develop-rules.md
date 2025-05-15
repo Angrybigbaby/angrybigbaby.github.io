@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:      "关于具备可行性的开发规范"
+title:      "一个具备可行性的开发规范长什么样子"
 subtitle:   "面向后端"
 date:       2025-05-15
 author:     "Bigbaby"
