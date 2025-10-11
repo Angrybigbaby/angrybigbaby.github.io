@@ -1,6 +1,14 @@
-# 一段SQL引发的思考
+---
+layout:     post
+title:      "一段SQL引发的思考"
+subtitle:   "SQL Boy心得分享"
+date:       2025-10-11
+author:     "Bigbaby"
+tags:
+    - SQL
+---
 
-最近在Review代码时，发现了一个很有代表性的问题。
+> 最近在Review代码时，发现了一个很有代表性的问题。
 
 ## 问题背景
 
