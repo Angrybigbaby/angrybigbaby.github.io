@@ -24,48 +24,77 @@ HASH 分区（哈希分区）
 
 > 注：Hologres 不支持 Hive 那种“多级字符串路径式分区”，也不支持“动态分区自动建目录”。所有分区必须通过 DDL 显式定义。
 
+## 分区类型详解与对比
+
+1. RANGE 分区（范围分区）
+适用场景：时间序列数据（日志、事件、监控）、数值区间（如用户 ID 段）。
+语法示例:
 ```sql
-SELECT o1.id, o1.issue_name, ... 
-FROM ods_op_support_operation_issue_p_d oi
-LEFT JOIN ods_op_support_sys_dict_data_p_d d1 
-  ON oi.issue_source = d1.dict_value 
-  AND d1.dict_type = 'issue_source'
-  AND oi.ds = d1.ds
--- 重复8次，每个JOIN都单独查询
+CREATE TABLE logs (
+    ts TIMESTAMPTZ,
+    msg TEXT
+) PARTITION BY RANGE (ts);
+
+CREATE TABLE logs_202501 PARTITION OF logs
+    FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
 ```
+优点：
+查询带范围条件时，分区剪枝极高效；
+支持时间函数直接比较（ts > now() - interval '7 days'）；
+可配合 自动间隔分区（hg_create_interval_partition）简化运维。
 
-这种8次JOIN的写法看似离谱，实则为了将每次JOIN的结果集拉宽，有一定合理性。但依然存在问题：**对同一个表进行了8次全表扫描查询**。
-
-## 优化思路
-
-调整为CTE结构，并优化为子表嵌套查询
-
+缺点：
+数据倾斜风险高（如某天流量暴增）；
+必须预先创建分区，否则写入失败。
+2. LIST 分区（枚举分区）
+适用场景：离散枚举值，如 region IN ('cn', 'us', 'eu')、tenant_id、status 等。
+语法示例：
 ```sql
-WITH dict AS (
-  SELECT * 
-  FROM ods_op_support_sys_dict_data_p_d
-  WHERE ds = '${bizdate}'
-    AND dict_type IN ('issue_source','restart_or_not',...)
-)
-SELECT oi.issue_id, ...
-FROM ods_op_support_operation_issue_p_d oi
-LEFT JOIN dict d1 ON oi.issue_source = d1.dict_value AND d1.dict_type = 'issue_source'
+CREATE TABLE user_events (
+    region TEXT,
+    event TEXT
+) PARTITION BY LIST (region);
+
+CREATE TABLE user_events_cn PARTITION OF user_events
+    FOR VALUES IN ('cn');
+
+CREATE TABLE user_events_global PARTITION OF user_events
+    DEFAULT;  -- 默认分区（可选）
 ```
-优化后，WITH子句执行一次查询，获取所有需要的字典数据。结果存储在临时结果集dict中。后续8个JOIN都**基于这个临时结果集**，不再需要访问原始表。
+优点：
+枚举值查询可精准命中单个分区；
+适合多租户或地域隔离场景；
+支持 DEFAULT 分区兜底未知值。
 
-IO次数由8次下降为1次。
+缺点：
+枚举值过多时（>1000），管理成本高；
+不适合连续值或高基数字段（如 user_id）。
+3. HASH 分区（哈希分区）
+适用场景：高基数字段（如 user_id、order_id），用于打散数据分布，避免热点。
+语法示例：
+```sql
+CREATE TABLE user_profiles (
+    user_id BIGINT,
+    name TEXT
+) PARTITION BY HASH (user_id);
 
-## 深入思考
+-- 创建 4 个哈希分区
+CREATE TABLE user_profiles_p0 PARTITION OF user_profiles
+    FOR VALUES WITH (MODULUS 4, REMAINDER 0);
+CREATE TABLE user_profiles_p1 PARTITION OF user_profiles
+    FOR VALUES WITH (MODULUS 4, REMAINDER 1);
+-- ... p2, p3
+```
+优点：
+天然负载均衡，避免写入/查询热点；
+适合点查（WHERE user_id = 12345），可通过哈希函数快速定位分区；
+与主键结合，可实现高效 UPSERT。
 
-这个问题带给我们两点启示：
+缺点：
+范围查询无法剪枝（如 user_id BETWEEN 1 AND 1000 会扫描所有分区）；
+分区数量需提前规划，后期扩容复杂（需重分布数据）。
 
-### 1. 避免重复查询
 
-数据库查询是昂贵的操作，重复查询相同表会带来巨大开销。当多个JOIN都指向同一张表时，应优先考虑合并查询。
-
-### 2. 临时表的价值
-
-WITH语句创建的临时表在查询过程中只被扫描一次，后续所有JOIN都基于这个临时结果集，大幅减少I/O。
 
 ## 结语
 
