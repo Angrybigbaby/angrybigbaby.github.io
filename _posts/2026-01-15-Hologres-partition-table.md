@@ -28,7 +28,7 @@ HASH 分区（哈希分区）
 
 1. RANGE 分区（范围分区）
 适用场景：时间序列数据（日志、事件、监控）、数值区间（如用户 ID 段）。
-语法示例:
+
 ```sql
 CREATE TABLE logs (
     ts TIMESTAMPTZ,
@@ -46,9 +46,10 @@ CREATE TABLE logs_202501 PARTITION OF logs
 缺点：
 数据倾斜风险高（如某天流量暴增）；
 必须预先创建分区，否则写入失败。
+
 2. LIST 分区（枚举分区）
 适用场景：离散枚举值，如 region IN ('cn', 'us', 'eu')、tenant_id、status 等。
-语法示例：
+
 ```sql
 CREATE TABLE user_events (
     region TEXT,
@@ -69,9 +70,10 @@ CREATE TABLE user_events_global PARTITION OF user_events
 缺点：
 枚举值过多时（>1000），管理成本高；
 不适合连续值或高基数字段（如 user_id）。
+
 3. HASH 分区（哈希分区）
 适用场景：高基数字段（如 user_id、order_id），用于打散数据分布，避免热点。
-语法示例：
+
 ```sql
 CREATE TABLE user_profiles (
     user_id BIGINT,
@@ -93,6 +95,17 @@ CREATE TABLE user_profiles_p1 PARTITION OF user_profiles
 缺点：
 范围查询无法剪枝（如 user_id BETWEEN 1 AND 1000 会扫描所有分区）；
 分区数量需提前规划，后期扩容复杂（需重分布数据）。
+
+| 维度 | Hive “分区” | Hologres 分区（RANGE/LIST/HASH） |
+|------|-------------|-------------------------------|
+| 本质 | 元数据对 HDFS 路径的字符串映射 | 数据库内核管理的物理子表 |
+| 类型支持 | 仅“字符串枚举”，无语义 | 强类型 + 三种策略（范围/枚举/哈希） |
+| 数据写入 | 写入即自动创建目录（动态分区） | 必须显式 DDL 创建分区，否则报错 |
+| 更新能力 | 不支持 UPDATE/DELETE（ACID 表性能差） | 原生支持 UPSERT/DELETE（需主键） |
+| 查询优化 | 仅目录级剪枝 | 分区剪枝 + 列存谓词下推 + 向量化执行 |
+| 存储模型 | 依赖外部文件格式（Parquet/ORC） | 内置列存，自动压缩、索引、合并 |
+| 小文件问题 | 严重，需手动 compaction | 无小文件，写入由引擎自动合并 |
+| 实时性 | 批处理，分钟级以上 | 写入秒级可见，支持流式摄入 |
 
 
 
