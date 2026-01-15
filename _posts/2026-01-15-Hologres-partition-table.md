@@ -10,7 +10,7 @@ tags:
     - Hologres
 ---
 
-> Hologres 是一个兼容 PostgreSQL 协议、但内核深度重构的云原生实时数仓引擎。在这一背景下，Hologres的分区特性和PostgreSQL有相似性，但也有很多不同。和常用的Hive、Spark等离线大数据引擎相比，差异更加明显。
+> Hologres 是一个兼容 PostgreSQL 协议、但内核深度重构的云原生实时数仓引擎。在这一背景下，Hologres 的分区特性和 PostgreSQL 有相似性，但不多。和常用的 Hive、Spark 等离线大数据引擎相比，差异更加明显。
 
 ## Hologres分区类型
 
@@ -22,11 +22,12 @@ RANGE 分区（范围分区）
 LIST 分区（枚举分区）
 HASH 分区（哈希分区）
 
-> 注：Hologres 不支持 Hive 那种“多级字符串路径式分区”，也不支持“动态分区自动建目录”。所有分区必须通过 DDL 显式定义。
+> 注：Hologres 不支持 Hive 的多级字符串路径式分区，也不支持动态分区自动建目录。所有分区必须通过 DDL 显式定义。
 
 ## 分区类型详解与对比
 
 ### 1. RANGE 分区（范围分区）
+
 适用场景：时间序列数据（日志、事件、监控）、数值区间（如用户 ID 段）。
 
 ```sql
@@ -39,15 +40,16 @@ CREATE TABLE logs_202501 PARTITION OF logs
     FOR VALUES FROM ('2025-01-01') TO ('2025-02-01');
 ```
 优点：
-查询带范围条件时，分区剪枝极高效；
+查询带范围条件时，分区剪枝相对高效；
 支持时间函数直接比较（ts > now() - interval '7 days'）；
-可配合 自动间隔分区（hg_create_interval_partition）简化运维。
+可配合自动间隔分区（hg_create_interval_partition）简化运维。
 
 缺点：
 数据倾斜风险高（如某天流量暴增）；
 必须预先创建分区，否则写入失败。
 
 ### 2. LIST 分区（枚举分区）
+
 适用场景：离散枚举值，如 region IN ('cn', 'us', 'eu')、tenant_id、status 等。
 
 ```sql
@@ -72,6 +74,7 @@ CREATE TABLE user_events_global PARTITION OF user_events
 不适合连续值或高基数字段（如 user_id）。
 
 ### 3. HASH 分区（哈希分区）
+
 适用场景：高基数字段（如 user_id、order_id），用于打散数据分布，避免热点。
 
 ```sql
@@ -98,16 +101,12 @@ CREATE TABLE user_profiles_p1 PARTITION OF user_profiles
 
 ## 与Hive分区的差异
 
-| 维度 | Hive “分区” | Hologres 分区（RANGE/LIST/HASH） |
+| 维度 | Hive 分区 | Hologres 分区（RANGE/LIST/HASH） |
 |------|-------------|-------------------------------|
 | 本质 | 元数据对 HDFS 路径的字符串映射 | 数据库内核管理的物理子表 |
 | 类型支持 | 仅“字符串枚举”，无语义 | 强类型 + 三种策略（范围/枚举/哈希） |
 | 数据写入 | 写入即自动创建目录（动态分区） | 必须显式 DDL 创建分区，否则报错 |
-| 更新能力 | 不支持 UPDATE/DELETE（ACID 表性能差） | 原生支持 UPSERT/DELETE（需主键） |
 | 查询优化 | 仅目录级剪枝 | 分区剪枝 + 列存谓词下推 + 向量化执行 |
-| 存储模型 | 依赖外部文件格式（Parquet/ORC） | 内置列存，自动压缩、索引、合并 |
-| 小文件问题 | 严重，需手动 compaction | 无小文件，写入由引擎自动合并 |
-| 实时性 | 批处理，分钟级以上 | 写入秒级可见，支持流式摄入 |
 
 ## 如何选择分区策略
 
@@ -124,9 +123,9 @@ CREATE TABLE user_profiles_p1 PARTITION OF user_profiles
 
 我们常用的分区键是时间字段。那么为什么时间分区更适合range而不是list？首次在 Hologres 建分区表时，这是我在思考的一个问题。
 
-所以以时间字段为例，我们来从几个角度分析这个问题。
+所以，以时间字段为例，我们来从几个角度分析这个问题。
 
-### 查询效率
+### 1. 查询效率
 
 假设查询：
 ```sql
@@ -145,7 +144,7 @@ LIST 分区（按天建分区）：
 
 因此结论：在常用的where + 范围的过滤条件下，RANGE分区查询效率更优。
 
-### 语义匹配
+### 2. 语义匹配
 
 一言以蔽之，时间是区间，而不是枚举。
 
@@ -164,7 +163,7 @@ RANGE 表达的是 “一段时光”，LIST 表达的是 “几个日子”。
 
 因此结论：在语义上和数据库本身的设计思想上，时间字段更适合RANGE分区
 
-### 运维成本
+### 3. 运维成本
 
 在手动创建分区的场景中：
 
@@ -184,7 +183,7 @@ CREATE TABLE logs_jan PARTITION OF logs
 如果按小时分区,那就要写 720 个字符串，很麻烦。
 如果某天漏写了一个日期，写入该天数据会失败（无匹配分区），而 RANGE 只要区间覆盖就不会遗漏。
 
-### 拓展性
+### 4. 拓展性
 
 RANGE 支持任意粒度：
 可以快速切换为按周、按小时、甚至按分钟分区，只需调整 FROM/TO 边界。
@@ -192,9 +191,9 @@ RANGE 支持任意粒度：
 LIST 绑定具体值：
 一旦按天建了 LIST，想改成按小时，就必须重建所有分区。因为 '2025-01-01 10:00:00' 不等于 '2025-01-01'。
 
-此外，Hologres 提供 自动间隔分区（hg_create_interval_partition），仅对 RANGE 分区生效，可自动创建未来 N 个月的分区。LIST 完全不支持此类自动化。
+此外，Hologres 提供自动间隔分区（hg_create_interval_partition），仅对 RANGE 分区生效，可自动创建未来 N 个月的分区。LIST 完全不支持此类自动化。
 
-### 反例
+### 5. 反例
 
 最后让我们假设，某头铁同学非要用LIST分区，他会遇到什么情况？
 
