@@ -1,7 +1,7 @@
 ---
 layout:     post
 title:      "关于Hudi的一些配置和优化"
-subtitle:   "今天我生日，这次聊聊实时湖仓的一次实践"
+subtitle:   "这次聊聊实时湖仓的一次实践"
 date:       2024-05-05
 author:     "Bigbaby"
 catalog:    true
